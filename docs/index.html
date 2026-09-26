@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Loot Ledger — uaRO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1B211D;
+    --panel: #232A24;
+    --panel-raised: #2A3229;
+    --line: #3A443C;
+    --gold: #C9A227;
+    --gold-soft: #a98d34;
+    --ink: #EDE6D6;
+    --ink-muted: #9AA398;
+    --danger: #B5533C;
+    --radius: 3px;
+    font-family: Inter, system-ui, sans-serif;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  :root:not([data-theme="light"]) { color-scheme: dark; }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #EFEAE0; --panel: #FBF8F1; --panel-raised: #FFFFFF;
+      --line: #D8D0BE; --ink: #262620; --ink-muted: #6B6555;
+      --gold: #9C7A1E; --gold-soft: #7d6318;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body { background: var(--bg); color: var(--ink); font-family: Inter, system-ui, sans-serif; min-height: 100%; padding: 28px 20px 60px; }
+  .wrap { max-width: 1220px; margin: 0 auto; }
+
+  header.masthead {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+    border-bottom: 1px solid var(--line); padding-bottom: 18px; margin-bottom: 28px; flex-wrap: wrap;
+  }
+  header.masthead h1 { font-family: Fraunces, serif; font-weight: 600; font-size: 30px; margin: 0; }
+  header.masthead .subtitle { color: var(--ink-muted); font-size: 13.5px; max-width: 380px; line-height: 1.4; }
+
+  .grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+  .card + .card { margin-top: 22px; }
+  .card h2 { font-family: Fraunces, serif; font-size: 17px; font-weight: 600; margin: 0 0 14px; }
+
+  .enemy-card {
+    background: var(--panel-raised); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px; margin-bottom: 16px;
+  }
+  .enemy-card:last-child { margin-bottom: 0; }
+  .enemy-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .enemy-head input[type="text"].enemy-name { font-family: Fraunces, serif; font-size: 15.5px; font-weight: 600; flex: 1; min-width: 140px; background: transparent; border: none; border-bottom: 1px solid var(--line); border-radius: 0; padding: 4px 2px; }
+  .enemy-head input[type="text"].enemy-name:focus-visible { border-bottom-color: var(--gold); }
+  .kph-field { display: flex; align-items: center; gap: 6px; }
+  .kph-field label { font-size: 12px; color: var(--ink-muted); white-space: nowrap; }
+  .kph-field input[type="number"] { width: 80px; }
+
+  input[type="text"], input[type="number"] {
+    background: var(--panel-raised); border: 1px solid var(--line); border-radius: var(--radius);
+    color: var(--ink); padding: 8px 10px; font-size: 14px; font-family: Inter, sans-serif; width: 100%;
+  }
+  .enemy-card input[type="text"], .enemy-card input[type="number"] { background: var(--panel); }
+  input:focus-visible, button:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+
+  table.ledger { width: 100%; border-collapse: collapse; }
+  table.ledger th { text-align: left; font-size: 11.5px; font-weight: 600; color: var(--ink-muted); padding: 0 8px 6px; border-bottom: 1px solid var(--line); }
+  table.ledger th.num, table.ledger td.num { text-align: center; }
+  table.ledger td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  table.ledger tr:last-child td { border-bottom: none; }
+  .item-value-cell { display: flex; align-items: center; justify-content: center; gap: 6px; max-width: 160px; width: 100%; margin: 0 auto; }
+  .item-value-cell input { width: 100px; flex: none; text-align: right; font-size: 15px; padding: 9px 11px; }
+  .item-value-cell span { color: var(--ink-muted); font-size: 13px; }
+  .remove-btn { background: none; border: 1px solid var(--line); color: var(--ink-muted); border-radius: var(--radius); width: 24px; height: 24px; cursor: pointer; font-size: 14px; line-height: 1; }
+  .remove-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+  .add-row-btn, .add-enemy-btn {
+    margin-top: 10px; background: none; border: 1px dashed var(--line); color: var(--ink-muted);
+    padding: 7px 12px; border-radius: var(--radius); cursor: pointer; font-size: 13px; width: 100%;
+  }
+  .add-enemy-btn { padding: 10px 12px; font-size: 13.5px; }
+  .add-row-btn:hover, .add-enemy-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  .enemy-subtotal { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12.5px; color: var(--ink-muted); }
+  .enemy-subtotal strong { color: var(--gold); font-weight: 600; }
+
+  .remove-enemy-btn { background: none; border: 1px solid var(--line); color: var(--ink-muted); border-radius: var(--radius); padding: 5px 9px; cursor: pointer; font-size: 12px; }
+  .remove-enemy-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+  .empty-note { color: var(--ink-muted); font-size: 13.5px; padding: 8px 4px; }
+
+  .btn { font-family: Inter, sans-serif; font-size: 13.5px; font-weight: 600; padding: 9px 16px; border-radius: var(--radius); cursor: pointer; border: 1px solid transparent; }
+  .btn-gold { background: var(--gold); color: #1B211D; }
+  .btn-gold:hover { background: var(--gold-soft); }
+  .btn-ghost { background: none; border-color: var(--line); color: var(--ink); }
+  .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+  .btn-danger { background: none; border-color: var(--line); color: var(--ink-muted); }
+  .btn-danger:hover { border-color: var(--danger); color: var(--danger); }
+
+  .save-row { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .save-row input { flex: 1; min-width: 140px; }
+
+  .summary-figure { font-family: Fraunces, serif; font-weight: 700; font-size: 34px; color: var(--gold); line-height: 1.1; }
+  .summary-figure .unit { font-size: 15px; color: var(--ink-muted); font-family: Inter, sans-serif; font-weight: 500; margin-left: 4px; }
+  .summary-sub { color: var(--ink-muted); font-size: 13px; margin-top: 6px; }
+  .summary-line { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .summary-line:last-child { border-bottom: none; }
+  .summary-line .label { color: var(--ink-muted); }
+
+  .entry { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 10px; }
+  .entry:last-child { margin-bottom: 0; }
+  .entry-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .entry-name { font-weight: 600; font-size: 14px; }
+  .entry-value { color: var(--gold); font-size: 13.5px; font-weight: 600; white-space: nowrap; }
+  .entry-meta { color: var(--ink-muted); font-size: 12px; margin-top: 3px; }
+  .entry-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .entry-actions button { font-size: 12.5px; padding: 5px 10px; }
+
+  .active-flag { display: inline-block; font-size: 11px; color: var(--gold); border: 1px solid var(--gold); border-radius: var(--radius); padding: 1px 6px; margin-left: 8px; }
+  .helper { color: var(--ink-muted); font-size: 12px; margin-top: 4px; }
+
+  .card-head-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+  .card-head-actions { display: flex; gap: 8px; }
+  .btn-small {
+    background: none; border: 1px solid var(--line); color: var(--ink-muted);
+    font-family: Inter, sans-serif; font-size: 12px; font-weight: 600;
+    padding: 5px 10px; border-radius: var(--radius); cursor: pointer;
+  }
+  .btn-small:hover { border-color: var(--gold); color: var(--gold); }
+
+  .table-scroll { overflow-x: auto; }
+  .item-name-cell { display: flex; align-items: center; gap: 6px; }
+  .item-name-cell input[type="text"]:not(.item-id-input) { flex: 1; min-width: 160px; font-size: 15px; padding: 9px 11px; }
+  input.item-id-input { width: 76px; flex: none; text-align: center; font-size: 15px; padding: 9px 8px; }
+  .copy-id-btn {
+    background: none; border: 1px solid var(--line); color: var(--ink-muted);
+    font-family: Inter, sans-serif; font-size: 11.5px; font-weight: 600;
+    padding: 6px 9px; border-radius: var(--radius); cursor: pointer; white-space: nowrap; flex: none;
+  }
+  .copy-id-btn:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+  .copy-id-btn:disabled { opacity: 0.4; cursor: default; }
+  .rms-link-btn {
+    background: none; border: 1px solid var(--line); color: var(--ink-muted);
+    font-family: Inter, sans-serif; font-size: 11.5px; font-weight: 600;
+    padding: 6px 9px; border-radius: var(--radius); white-space: nowrap; flex: none;
+    text-decoration: none; display: inline-block;
+  }
+  .rms-link-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .rms-link-btn.disabled-link { opacity: 0.4; pointer-events: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <h1>The Loot Ledger</h1>
+    <div class="subtitle">Built for uaRO. Add each monster on your farming spot with its kill rate and drop table, and the ledger tallies expected zeny per hour across the whole run.</div>
+  </header>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>Monsters on this run</h2>
+        <div id="enemyList"></div>
+        <button class="add-enemy-btn" id="addEnemyBtn" type="button">+ Add monster</button>
+
+        <div class="save-row">
+          <input type="text" id="entryName" placeholder="Name this run (e.g. Payon Cave B1)">
+          <button class="btn btn-gold" id="saveBtn" type="button">Save run</button>
+          <button class="btn btn-ghost" id="newBtn" type="button">Start fresh</button>
+        </div>
+        <div class="helper" id="saveHelper"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Expected value</h2>
+        <div class="summary-figure" id="evPerHour">0<span class="unit">z / hour</span></div>
+        <div class="summary-sub">total across all enemies</div>
+        <div style="margin-top:16px;" id="enemyBreakdown"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head-row">
+          <h2 style="margin:0;">Saved runs</h2>
+          <div class="card-head-actions">
+            <button class="btn-small" id="exportBtn" type="button">Export</button>
+            <button class="btn-small" id="importBtn" type="button">Import</button>
+            <input type="file" id="importFile" accept="application/json,.json" style="display:none;">
+          </div>
+        </div>
+        <div class="helper" id="ioHelper" style="margin-bottom:10px;"></div>
+        <div id="entriesList"></div>
+        <div id="noEntries" class="empty-note" style="display:none;">Nothing saved yet. Save a run to keep it here.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const STORAGE_KEY = 'loot-ledger-entries';
+  let enemies = [ makeEnemy() ];
+  let activeEntryId = null;
+
+  function cryptoId() { return 'i' + Math.random().toString(36).slice(2, 10); }
+
+  function copyToClipboard(text, btn) {
+    function flash(ok) {
+      if (!btn) return;
+      const original = btn.textContent;
+      btn.textContent = ok ? 'Copied!' : 'Failed';
+      btn.disabled = true;
+      setTimeout(function () { btn.textContent = original; btn.disabled = false; }, 1200);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { flash(true); }).catch(function () { legacyCopy(text, flash); });
+    } else {
+      legacyCopy(text, flash);
+    }
+  }
+  function legacyCopy(text, flash) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      flash(ok);
+    } catch (e) {
+      flash(false);
+    }
+  }
+
+  function makeEnemy() {
+    return { id: cryptoId(), name: '', killsPerHour: '', items: [ makeItem() ] };
+  }
+  function makeItem() {
+    return { id: cryptoId(), name: '', chance: '', value: '', itemId: '' };
+  }
+
+  function loadEntries() {
+    try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : []; }
+    catch (e) { return []; }
+  }
+  function saveEntries(entries) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
+    catch (e) { console.error('Could not save', e); }
+  }
+
+  function fmtNum(n, digits) {
+    if (!isFinite(n)) return '0';
+    return n.toLocaleString(undefined, { maximumFractionDigits: digits ?? 1, minimumFractionDigits: 0 });
+  }
+  function fmtCommas(raw) {
+    if (raw === '' || raw === null || raw === undefined) return '';
+    const n = parseFloat(String(raw).replace(/,/g, ''));
+    if (isNaN(n)) return '';
+    return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  }
+  function fmtDate(ts) {
+    const d = new Date(ts);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' · ' +
+      d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function enemyEV(enemy) {
+    const kph = parseFloat(enemy.killsPerHour) || 0;
+    let perKill = 0;
+    enemy.items.forEach(function (item) {
+      const chance = parseFloat(item.chance) || 0;
+      const value = parseFloat(String(item.value).replace(/,/g, '')) || 0;
+      perKill += (chance / 100) * value;
+    });
+    return { kph: kph, perKill: perKill, perHour: perKill * kph };
+  }
+
+  function renderEnemies() {
+    const list = document.getElementById('enemyList');
+    list.innerHTML = '';
+    enemies.forEach(function (enemy, idx) {
+      const card = document.createElement('div');
+      card.className = 'enemy-card';
+
+      const head = document.createElement('div');
+      head.className = 'enemy-head';
+
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.className = 'enemy-name';
+      nameInput.placeholder = 'Monster name';
+      nameInput.value = enemy.name;
+      nameInput.addEventListener('input', function () { enemy.name = nameInput.value; renderEntries(); });
+
+      const kphField = document.createElement('div');
+      kphField.className = 'kph-field';
+      const kphLabel = document.createElement('label');
+      kphLabel.textContent = 'Kills / hr';
+      const kphInput = document.createElement('input');
+      kphInput.type = 'number';
+      kphInput.min = '0';
+      kphInput.step = 'any';
+      kphInput.placeholder = '0';
+      kphInput.value = enemy.killsPerHour;
+      kphInput.addEventListener('input', function () { enemy.killsPerHour = kphInput.value; recompute(); });
+      kphField.appendChild(kphLabel);
+      kphField.appendChild(kphInput);
+
+      const removeEnemyBtn = document.createElement('button');
+      removeEnemyBtn.className = 'remove-enemy-btn';
+      removeEnemyBtn.type = 'button';
+      removeEnemyBtn.textContent = 'Remove monster';
+      removeEnemyBtn.addEventListener('click', function () {
+        if (enemies.length === 1) return;
+        enemies = enemies.filter(function (e) { return e.id !== enemy.id; });
+        renderEnemies(); recompute();
+      });
+
+      head.appendChild(nameInput);
+      head.appendChild(kphField);
+      head.appendChild(removeEnemyBtn);
+      card.appendChild(head);
+
+      const tableWrap = document.createElement('div');
+      tableWrap.className = 'table-scroll';
+      const table = document.createElement('table');
+      table.className = 'ledger';
+      const thead = document.createElement('thead');
+      thead.innerHTML = '<tr><th>Item</th><th class="num" style="width:170px">Drop chance</th><th class="num" style="width:170px">Zeny value</th><th class="num" style="width:32px"></th></tr>';
+      const tbody = document.createElement('tbody');
+
+      if (enemy.items.length === 0) {
+        const note = document.createElement('div');
+        note.className = 'empty-note';
+        note.textContent = 'No items yet.';
+        card.appendChild(note);
+      } else {
+        enemy.items.forEach(function (item) {
+          const tr = document.createElement('tr');
+
+          const nameTd = document.createElement('td');
+          const nameCell = document.createElement('div');
+          nameCell.className = 'item-name-cell';
+          const itemNameInput = document.createElement('input');
+          itemNameInput.type = 'text';
+          itemNameInput.placeholder = 'Item name';
+          itemNameInput.value = item.name;
+          itemNameInput.addEventListener('input', function () { item.name = itemNameInput.value; });
+
+          const idInput = document.createElement('input');
+          idInput.type = 'text';
+          idInput.className = 'item-id-input';
+          idInput.inputMode = 'numeric';
+          idInput.placeholder = 'ID';
+          idInput.title = 'Item ID (optional)';
+          idInput.value = item.itemId || '';
+          idInput.addEventListener('input', function () {
+            item.itemId = idInput.value.replace(/[^0-9]/g, '');
+            if (idInput.value !== item.itemId) idInput.value = item.itemId;
+            copyBtn.disabled = !item.itemId;
+            updateRmsLink();
+          });
+          const copyBtn = document.createElement('button');
+          copyBtn.type = 'button';
+          copyBtn.className = 'copy-id-btn';
+          copyBtn.textContent = 'Copy';
+          copyBtn.title = 'Copy @ws command for this item';
+          copyBtn.disabled = !item.itemId;
+          copyBtn.addEventListener('click', function () {
+            if (!item.itemId) return;
+            copyToClipboard('@ws ' + item.itemId, copyBtn);
+          });
+
+          const rmsLink = document.createElement('a');
+          rmsLink.className = 'rms-link-btn';
+          rmsLink.textContent = 'RMS ↗';
+          rmsLink.title = 'Open this item on RateMyServer';
+          rmsLink.target = '_blank';
+          rmsLink.rel = 'noopener noreferrer';
+          function updateRmsLink() {
+            if (item.itemId) {
+              rmsLink.href = 'https://ratemyserver.net/index.php?page=re_item_db&item_id=' + item.itemId;
+              rmsLink.classList.remove('disabled-link');
+            } else {
+              rmsLink.removeAttribute('href');
+              rmsLink.classList.add('disabled-link');
+            }
+          }
+          updateRmsLink();
+
+          nameCell.appendChild(itemNameInput);
+          nameCell.appendChild(idInput);
+          nameCell.appendChild(copyBtn);
+          nameCell.appendChild(rmsLink);
+          nameTd.appendChild(nameCell);
+
+          const chanceTd = document.createElement('td');
+          chanceTd.className = 'num';
+          const chanceCell = document.createElement('div');
+          chanceCell.className = 'item-value-cell';
+          const chanceInput = document.createElement('input');
+          chanceInput.type = 'number';
+          chanceInput.min = '0'; chanceInput.max = '100'; chanceInput.step = 'any';
+          chanceInput.placeholder = '0';
+          chanceInput.value = item.chance;
+          chanceInput.addEventListener('input', function () { item.chance = chanceInput.value; recompute(); });
+          const pctSpan = document.createElement('span'); pctSpan.textContent = '%';
+          chanceCell.appendChild(chanceInput); chanceCell.appendChild(pctSpan);
+          chanceTd.appendChild(chanceCell);
+
+          const valueTd = document.createElement('td');
+          valueTd.className = 'num';
+          const valueInput = document.createElement('input');
+          valueInput.type = 'text';
+          valueInput.inputMode = 'decimal';
+          valueInput.placeholder = '0';
+          valueInput.value = fmtCommas(item.value);
+          valueInput.addEventListener('focus', function () {
+            valueInput.value = item.value === '' ? '' : String(item.value).replace(/,/g, '');
+          });
+          valueInput.addEventListener('input', function () {
+            item.value = valueInput.value.replace(/[^0-9.]/g, '');
+            recompute();
+          });
+          valueInput.addEventListener('blur', function () {
+            valueInput.value = fmtCommas(item.value);
+          });
+          const zSpan = document.createElement('span'); zSpan.textContent = 'z';
+          const valueCell = document.createElement('div');
+          valueCell.className = 'item-value-cell';
+          valueCell.appendChild(valueInput);
+          valueCell.appendChild(zSpan);
+          valueTd.appendChild(valueCell);
+
+          const removeTd = document.createElement('td');
+          removeTd.className = 'num';
+          const removeBtn = document.createElement('button');
+          removeBtn.className = 'remove-btn';
+          removeBtn.type = 'button';
+          removeBtn.textContent = '×';
+          removeBtn.title = 'Remove item';
+          removeBtn.addEventListener('click', function () {
+            enemy.items = enemy.items.filter(function (i) { return i.id !== item.id; });
+            renderEnemies(); recompute();
+          });
+          removeTd.appendChild(removeBtn);
+
+          tr.appendChild(nameTd); tr.appendChild(chanceTd); tr.appendChild(valueTd); tr.appendChild(removeTd);
+          tbody.appendChild(tr);
+        });
+        table.appendChild(thead);
+        table.appendChild(tbody);
+        tableWrap.appendChild(table);
+        card.appendChild(tableWrap);
+      }
+
+      const addItemBtn = document.createElement('button');
+      addItemBtn.className = 'add-row-btn';
+      addItemBtn.type = 'button';
+      addItemBtn.textContent = '+ Add item';
+      addItemBtn.addEventListener('click', function () {
+        enemy.items.push(makeItem());
+        renderEnemies(); recompute();
+      });
+      card.appendChild(addItemBtn);
+
+      const subtotal = document.createElement('div');
+      subtotal.className = 'enemy-subtotal';
+      subtotal.id = 'subtotal-' + enemy.id;
+      card.appendChild(subtotal);
+
+      list.appendChild(card);
+    });
+    updateSubtotals();
+  }
+
+  function updateSubtotals() {
+    enemies.forEach(function (enemy) {
+      const ev = enemyEV(enemy);
+      const el = document.getElementById('subtotal-' + enemy.id);
+      if (el) el.innerHTML = 'Subtotal <strong>' + fmtNum(ev.perHour, 1) + ' z/hr</strong> at ' + fmtNum(ev.kph, 0) + ' kills/hr';
+    });
+  }
+
+  function recompute() {
+    updateSubtotals();
+    let total = 0;
+    const breakdown = document.getElementById('enemyBreakdown');
+    breakdown.innerHTML = '';
+    enemies.forEach(function (enemy) {
+      const ev = enemyEV(enemy);
+      total += ev.perHour;
+      const line = document.createElement('div');
+      line.className = 'summary-line';
+      const label = document.createElement('span');
+      label.className = 'label';
+      label.textContent = enemy.name.trim() || 'Unnamed monster';
+      const val = document.createElement('span');
+      val.textContent = fmtNum(ev.perHour, 1);
+      line.appendChild(label); line.appendChild(val);
+      breakdown.appendChild(line);
+    });
+    document.getElementById('evPerHour').innerHTML = fmtNum(total, 1) + '<span class="unit"> z / hour</span>';
+  }
+
+  function renderEntries() {
+    const entries = loadEntries().sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+    const list = document.getElementById('entriesList');
+    const noEntries = document.getElementById('noEntries');
+    list.innerHTML = '';
+    if (entries.length === 0) { noEntries.style.display = 'block'; return; }
+    noEntries.style.display = 'none';
+
+    entries.forEach(function (entry) {
+      const div = document.createElement('div');
+      div.className = 'entry';
+
+      const top = document.createElement('div');
+      top.className = 'entry-top';
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'entry-name';
+      nameSpan.textContent = entry.name;
+      if (entry.id === activeEntryId) {
+        const flag = document.createElement('span');
+        flag.className = 'active-flag';
+        flag.textContent = 'editing';
+        nameSpan.appendChild(flag);
+      }
+      const valSpan = document.createElement('span');
+      valSpan.className = 'entry-value';
+      valSpan.textContent = fmtNum(entry.evPerHour, 1) + ' z/hr';
+      top.appendChild(nameSpan); top.appendChild(valSpan);
+
+      const enemyCount = entry.enemies.length;
+      const itemCount = entry.enemies.reduce(function (s, e) { return s + e.items.length; }, 0);
+      const meta = document.createElement('div');
+      meta.className = 'entry-meta';
+      meta.textContent = enemyCount + ' monster' + (enemyCount === 1 ? '' : 's') + ' · ' +
+        itemCount + ' item' + (itemCount === 1 ? '' : 's') + ' · updated ' + fmtDate(entry.updatedAt);
+
+      const actions = document.createElement('div');
+      actions.className = 'entry-actions';
+      const loadBtn = document.createElement('button');
+      loadBtn.className = 'btn btn-ghost';
+      loadBtn.type = 'button';
+      loadBtn.textContent = 'Load & adjust';
+      loadBtn.addEventListener('click', function () { loadEntry(entry); });
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn btn-danger';
+      delBtn.type = 'button';
+      delBtn.textContent = 'Delete';
+      delBtn.addEventListener('click', function () {
+        const remaining = loadEntries().filter(function (e) { return e.id !== entry.id; });
+        saveEntries(remaining);
+        if (activeEntryId === entry.id) { activeEntryId = null; document.getElementById('saveHelper').textContent = ''; }
+        renderEntries();
+      });
+      actions.appendChild(loadBtn); actions.appendChild(delBtn);
+
+      div.appendChild(top); div.appendChild(meta); div.appendChild(actions);
+      list.appendChild(div);
+    });
+  }
+
+  function loadEntry(entry) {
+    activeEntryId = entry.id;
+    document.getElementById('entryName').value = entry.name;
+    enemies = entry.enemies.map(function (e) {
+      return {
+        id: cryptoId(),
+        name: e.name,
+        killsPerHour: e.killsPerHour,
+        items: e.items.length ? e.items.map(function (i) { return { id: cryptoId(), name: i.name, chance: i.chance, value: i.value, itemId: i.itemId || '' }; }) : [ makeItem() ]
+      };
+    });
+    if (enemies.length === 0) enemies = [ makeEnemy() ];
+    renderEnemies(); recompute(); renderEntries();
+    document.getElementById('saveHelper').textContent = 'Editing "' + entry.name + '" — adjust values and save to update it, or save as a new run.';
+  }
+
+  function startFresh() {
+    activeEntryId = null;
+    document.getElementById('entryName').value = '';
+    enemies = [ makeEnemy() ];
+    renderEnemies(); recompute(); renderEntries();
+    document.getElementById('saveHelper').textContent = '';
+  }
+
+  document.getElementById('addEnemyBtn').addEventListener('click', function () {
+    enemies.push(makeEnemy());
+    renderEnemies(); recompute();
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', function () {
+    const name = document.getElementById('entryName').value.trim();
+    if (!name) {
+      document.getElementById('saveHelper').style.color = 'var(--danger)';
+      document.getElementById('saveHelper').textContent = 'Give this run a name before saving.';
+      return;
+    }
+    let total = 0;
+    const cleanEnemies = enemies.map(function (enemy) {
+      const ev = enemyEV(enemy);
+      total += ev.perHour;
+      return {
+        name: enemy.name.trim() || 'Unnamed monster',
+        killsPerHour: ev.kph,
+        items: enemy.items
+          .filter(function (i) { return i.name.trim() !== ''; })
+          .map(function (i) {
+            return { name: i.name.trim(), chance: parseFloat(i.chance) || 0, value: parseFloat(String(i.value).replace(/,/g, '')) || 0, itemId: i.itemId || '' };
+          })
+      };
+    });
+
+    const entries = loadEntries();
+    if (activeEntryId && entries.some(function (e) { return e.id === activeEntryId; })) {
+      const updated = entries.map(function (e) {
+        if (e.id !== activeEntryId) return e;
+        return { id: e.id, name: name, enemies: cleanEnemies, evPerHour: total, createdAt: e.createdAt, updatedAt: Date.now() };
+      });
+      saveEntries(updated);
+      document.getElementById('saveHelper').style.color = 'var(--ink-muted)';
+      document.getElementById('saveHelper').textContent = 'Updated "' + name + '".';
+    } else {
+      const newEntry = { id: cryptoId(), name: name, enemies: cleanEnemies, evPerHour: total, createdAt: Date.now(), updatedAt: Date.now() };
+      entries.push(newEntry);
+      saveEntries(entries);
+      activeEntryId = newEntry.id;
+      document.getElementById('saveHelper').style.color = 'var(--ink-muted)';
+      document.getElementById('saveHelper').textContent = 'Saved "' + name + '".';
+    }
+    renderEntries();
+  });
+
+  document.getElementById('newBtn').addEventListener('click', startFresh);
+
+  // --- Export / import ---
+  let downloadsCap = null;
+  if (window.claude && typeof window.claude.use === 'function') {
+    window.claude.use('downloads').then(function (d) { downloadsCap = d; }).catch(function () {});
+  }
+
+  function setIoHelper(text, isError) {
+    const el = document.getElementById('ioHelper');
+    el.textContent = text;
+    el.style.color = isError ? 'var(--danger)' : 'var(--ink-muted)';
+  }
+
+  function classicDownload(filename, text) {
+    const blob = new Blob([text], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  document.getElementById('exportBtn').addEventListener('click', function () {
+    const entries = loadEntries();
+    if (entries.length === 0) { setIoHelper('No saved runs to export yet.', true); return; }
+    const filename = 'loot-ledger-export.json';
+    const data = JSON.stringify(entries, null, 2);
+    if (downloadsCap) {
+      downloadsCap.save({ filename: filename, data: data })
+        .then(function () { setIoHelper('Exported ' + entries.length + ' run' + (entries.length === 1 ? '' : 's') + '.'); })
+        .catch(function (err) {
+          if (err && err.code === 'declined') return;
+          classicDownload(filename, data);
+          setIoHelper('Exported ' + entries.length + ' run' + (entries.length === 1 ? '' : 's') + '.');
+        });
+    } else {
+      classicDownload(filename, data);
+      setIoHelper('Exported ' + entries.length + ' run' + (entries.length === 1 ? '' : 's') + '.');
+    }
+  });
+
+  document.getElementById('importBtn').addEventListener('click', function () {
+    document.getElementById('importFile').click();
+  });
+
+  document.getElementById('importFile').addEventListener('change', function (e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function () {
+      let parsed;
+      try {
+        parsed = JSON.parse(reader.result);
+      } catch (err) {
+        setIoHelper('That file is not valid JSON.', true);
+        e.target.value = '';
+        return;
+      }
+      const incoming = Array.isArray(parsed) ? parsed : [parsed];
+      const valid = incoming.filter(function (x) {
+        return x && typeof x === 'object' && typeof x.name === 'string' && Array.isArray(x.enemies);
+      });
+      if (valid.length === 0) {
+        setIoHelper('No valid runs found in that file.', true);
+        e.target.value = '';
+        return;
+      }
+      const existing = loadEntries();
+      const existingIds = new Set(existing.map(function (en) { return en.id; }));
+      const merged = existing.slice();
+      valid.forEach(function (en) {
+        const clone = JSON.parse(JSON.stringify(en));
+        if (!clone.id || existingIds.has(clone.id)) clone.id = cryptoId();
+        if (!clone.createdAt) clone.createdAt = Date.now();
+        if (!clone.updatedAt) clone.updatedAt = Date.now();
+        existingIds.add(clone.id);
+        merged.push(clone);
+      });
+      saveEntries(merged);
+      renderEntries();
+      setIoHelper('Imported ' + valid.length + ' run' + (valid.length === 1 ? '' : 's') + '.');
+      e.target.value = '';
+    };
+    reader.readAsText(file);
+  });
+
+  renderEnemies();
+  recompute();
+  renderEntries();
+})();
+</script>
+</body>
+</html>
